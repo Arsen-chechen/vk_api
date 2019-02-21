@@ -1,0 +1,10 @@
+[package]
+name = "vk_api"
+version = "0.1.0"
+authors = ["arsen <arsenchechen@yahoo.com>"]
+edition = "2018"
+
+[dependencies]
+reqwest = "0.9.9"
+serde_json = "1.0"
+rand = "0.6.5"
