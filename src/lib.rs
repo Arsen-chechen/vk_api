@@ -7,9 +7,9 @@ extern crate rand;
 
 #[derive(Debug)]
 pub struct DataOfServer {
-	pub key: Box<str>,
-	pub server: Box<str>,
-	pub ts: Box<str>
+	key: Box<str>,
+	server: Box<str>,
+	ts: Box<str>
 }
 
 impl DataOfServer {
@@ -31,10 +31,10 @@ impl DataOfServer {
 
 #[derive(Debug)]
 pub struct VkData {
-	access_token: &'static str,
-	version: &'static str,
-	group_id: &'static str,
-	url: &'static str
+	pub access_token: &'static str,
+	pub version: &'static str,
+	pub group_id: &'static str,
+	pub url: &'static str
 }
 
 impl VkData {
