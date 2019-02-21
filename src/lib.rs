@@ -7,9 +7,9 @@ extern crate rand;
 
 #[derive(Debug)]
 pub struct DataOfServer {
-	key: Box<str>,
-	server: Box<str>,
-	ts: Box<str>
+	pub key: Box<str>,
+	pub server: Box<str>,
+	pub ts: Box<str>
 }
 
 impl DataOfServer {
