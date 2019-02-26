@@ -14,7 +14,7 @@ use std::string::ToString;
 Эта черта используется мной для того, чтобы отдавать функции параметры для web-api 
 вида key=value. Поэтому все значение преобразуются в string, тип удобный для web.
 */
-trait PutInAStrings {
+pub trait PutInAStrings {
 	fn put<P, V>(&mut self, key: P, val: V)
 	where P:ToString, V:ToString;
 }
@@ -24,6 +24,7 @@ impl PutInAStrings for Vec<(String, String)> {
 		self.push((key.to_string(), val.to_string()));
 	}
 }
+#[macro_export]
 macro_rules! par {
 	( $(($k:expr, $v:expr)),* ) => {
 		{
@@ -84,14 +85,17 @@ macro_rules! par {
 	let rob: Value = get!(john;).unwrap();
 	let first: String = serde_json::from_value(rob["phones"][0].clone()).unwrap();
 	println!("{}", first);
-	
+
+примечание: В случае с сохранением значения типа &Value, возможно, будет удобнее писать
+	&Value[key];	
 */
+#[macro_export]
 macro_rules! get {
 	( $val:expr; $($x:expr),*) => (serde_json::from_value($val$([$x])*.clone()))
 }
 
 
-
+// Информация о long polling сервере, получаемая vk.groups_GetLongPollServer()'ом
 #[derive(Debug)]
 pub struct DataOfServer {
 	key: Box<str>,
@@ -100,6 +104,17 @@ pub struct DataOfServer {
 }
 
 impl DataOfServer {
+
+/*метод, автоматически опрашивающий сервер. Возвращает вектор update'ов, 
+автоматически подменяет ts. Пример:
+let mut server_data: DataOfServer = vk.groups_GetLongPollServer().unwrap();
+	loop {
+		let updates = server_data.poll().unwrap();
+		for update in updates {
+			handler(update, vk).unwrap();
+		}	
+	}
+*/
 	pub fn poll(&mut self) -> Result<Vec<Value>, Box<Error>> {
 		let unk_err = "Unknown json from vk";
 		let resp: Value = reqwest::get(
@@ -116,6 +131,7 @@ impl DataOfServer {
 	}
 }
 
+// можно назвать эту структуру "клиентом vk-api"
 #[derive(Debug)]
 pub struct VkData {
 	pub access_token: &'static str,
@@ -126,7 +142,8 @@ pub struct VkData {
 
 impl VkData {
 
-	fn method(&self, method: &str, parameters: std::vec::Vec<(String, String)>) -> 
+	//
+	pub fn method(&self, method: &str, parameters: std::vec::Vec<(String, String)>) -> 
 		Result<Value, Box<Error>> {
 		let unk_err = "Unknown json from vk";
 
