@@ -4,6 +4,7 @@ use std::boxed::Box;
 use std::error::Error;
 use serde_json::Value;
 extern crate rand;
+use std::string::ToString;
 
 
 /*
@@ -59,9 +60,37 @@ macro_rules! par {
 	вы можете использовать put (но только с mut кортежами):
 	let mut params3 = par![];
 	params3.put("heh", "mda".to_string); //Да, String тоже можно передавать
-
-
 */
+
+/*макрос, написанный для десериализации в  serde_json, который позволяет 
+в одну легкочитаемую строчку без повторения кода получать значения 
+определённого(!) типа. Компилятор может выдать ошибку "Cannot infer type", 
+если тип будет не определён. Примеры использования:
+ get!(Value; key, key) //Так же как Value[key][key]
+
+ let john = json!({
+	"name": "John Doe",
+	"age": 43,
+	"phones": [
+	    "+44 1234567",
+		"+44 2345678"
+	]
+	});
+	let new: String = get!(john; "phones", 0).unwrap();
+	let old: String = serde_json::from_value(john["phones"][0].clone()).unwrap();
+	assert_eq!(new, old);
+
+Вызов без параметров:
+	let rob: Value = get!(john;).unwrap();
+	let first: String = serde_json::from_value(rob["phones"][0].clone()).unwrap();
+	println!("{}", first);
+	
+*/
+macro_rules! get {
+	( $val:expr; $($x:expr),*) => (serde_json::from_value($val$([$x])*.clone()))
+}
+
+
 
 #[derive(Debug)]
 pub struct DataOfServer {
@@ -73,14 +102,14 @@ pub struct DataOfServer {
 impl DataOfServer {
 	pub fn poll(&mut self) -> Result<Vec<Value>, Box<Error>> {
 		let unk_err = "Unknown json from vk";
-		let mut resp: Value = reqwest::get(
+		let resp: Value = reqwest::get(
 			format!("{server}?act=a_check&key={key}&ts={ts}&wait={w}", server=self.server, key=self.key, ts=self.ts, w=20)
 		.as_str())?
 		.json()?;
 
 		if resp["updates"]!=Value::Null {
-			self.ts = as_str_handle(&resp["ts"])?;
-			return Ok(as_arr_handle(&mut resp["updates"])?)
+			self.ts = get!(resp; "ts")?;
+			return Ok(get!(resp; "updates")?)
 		} else {
 			return Err(From::from(unk_err))
 		}
@@ -147,23 +176,9 @@ impl VkData {
 			par![("group_id", self.group_id)]
 		)?;
 		Ok(DataOfServer{
-			key: as_str_handle(&resp["key"])?,
-			server: as_str_handle(&resp["server"])?,
-			ts: as_str_handle(&resp["ts"])?
+			key: get!(resp; "key")?,
+			server: get!(resp; "server")?,
+			ts: get!(resp; "ts")?
 		})
 	}
-}
-
-pub fn as_str_handle(s: &Value) -> Result<Box<str>, Box<Error>> {
-	Ok(s.as_str().ok_or("Unknown json from vk")?.into())
-}
-
-pub fn as_i64_handle(i: &Value) -> Result<i64, Box<Error>> {
-	let unk_err = "Unknown json from vk";
-	Ok(i.as_i64().ok_or(unk_err)?)
-}
-
-pub fn as_arr_handle(a: &mut Value) -> Result<Vec<Value>, Box<Error>> {
-	let unk_err = "Unknown json from vk";
-	Ok(a.as_array_mut().ok_or(unk_err)?.clone())
 }
