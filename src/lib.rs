@@ -142,20 +142,37 @@ pub struct VkData {
 
 impl VkData {
 
+	//builders
+	pub fn new(token: &'static str) -> Self {
+		VkData {
+			access_token: token,
+			version:"5.92",
+			group_id:"",
+			url :"https://api.vk.com/method/"
+		}
+	}
+	pub fn set_group_id(mut self, group_id: &'static str) -> Self {
+		self.group_id = group_id;
+		self
+	}
+	//call with group_id parameter
+	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
+		Result<Value, Box<Error>> {
+		parameters.put("group_id", self.group_id);
+		self.call(method, parameters)
+	}
 	//
-	pub fn method(&self, method: &str, parameters: std::vec::Vec<(String, String)>) -> 
+	pub fn call(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
 		Result<Value, Box<Error>> {
 		let unk_err = "Unknown json from vk";
 
-		let mut params = String::new();
-		for p in parameters.iter() {
-			params = params + &p.0 + "=" + &p.1 + "&";
-		}
-		params += &format!("access_token={AT}&v={V}", AT=&self.access_token, V=&self.version);
+		parameters.put("access_token", self.access_token);
+		parameters.put("v", self.version);
 
-		let data:Value = reqwest::get(
-			format!("{Url}{Method}?{Params}", Url=&self.url, Method=method, Params=params)
-		.as_str())?
+		let client = reqwest::Client::new();
+		let data:Value = client.get(&(self.url.to_string()+method))
+    	.query(&parameters)
+    	.send()?
 		.json()?;
 
 		if data["response"]!=Value::Null {
@@ -168,28 +185,8 @@ impl VkData {
 	}
 
 	#[allow(non_snake_case)]
-	pub fn messages_getHistory(&self, user_id: i64) -> Result<Value, Box<Error>> {
-		Ok( self.method("messages.getHistory", 
-			par![("count", "1"), ("user_id", user_id), ("group_id", self.group_id)]
-		)? )
-	}
-
-	pub fn messages_send(&self, message: String, user_id: i64) -> Result<(), Box<Error>> {
-		self.method("messages.send",
-			par![("user_id", user_id), ("random_id", rand::random::<i32>()), ("message", message), ("dont_parse_link", "0")]
-		)?;
-		Ok(())
-	}
-
-	pub fn users_get(&self, user_id: i64) -> Result<Value, Box<Error>> {
-		Ok( self.method("users.get",
-			par![("user_ids", user_id), ("name_case", "Nom")]
-		)? )
-	}
-
-	#[allow(non_snake_case)]
 	pub fn groups_GetLongPollServer(&self) -> Result<DataOfServer, Box<Error>> {
-		let resp = self.method("groups.getLongPollServer",
+		let resp = self.call("groups.getLongPollServer",
 			par![("group_id", self.group_id)]
 		)?;
 		Ok(DataOfServer{
