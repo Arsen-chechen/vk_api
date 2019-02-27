@@ -27,7 +27,7 @@ impl PutInAStrings for Vec<(String, String)> {
 #[macro_export]
 macro_rules! par {
 	( $(($k:expr, $v:expr)),* ) => {
-		{
+		{	#[allow(unused_mut)]
 			let mut temp: std::vec::Vec<(String, String)> = std::vec::Vec::new();
 			$(
 				temp.put($k, $v);
@@ -96,6 +96,7 @@ macro_rules! get {
 
 
 // Информация о long polling сервере, получаемая vk.groups_GetLongPollServer()'ом
+// Или vk.call("messages.getLongPollServer", ...) вызванный с токеном пользователя
 #[derive(Debug)]
 pub struct DataOfServer {
 	key: Box<str>,
@@ -115,10 +116,10 @@ let mut server_data: DataOfServer = vk.groups_GetLongPollServer().unwrap();
 		}	
 	}
 */
-	pub fn poll(&mut self) -> Result<Vec<Value>, Box<Error>> {
+	pub fn poll_group(&mut self, wait: i8) -> Result<Vec<Value>, Box<Error>> {
 		let unk_err = "Unknown json from vk";
 		let resp: Value = reqwest::get(
-			format!("{server}?act=a_check&key={key}&ts={ts}&wait={w}", server=self.server, key=self.key, ts=self.ts, w=20)
+			format!("{server}?act=a_check&key={key}&ts={ts}&wait={w}", server=self.server, key=self.key, ts=self.ts, w=wait)
 		.as_str())?
 		.json()?;
 
@@ -134,10 +135,11 @@ let mut server_data: DataOfServer = vk.groups_GetLongPollServer().unwrap();
 // можно назвать эту структуру "клиентом vk-api"
 #[derive(Debug)]
 pub struct VkData {
-	pub access_token: &'static str,
-	pub version: &'static str,
-	pub group_id: &'static str,
-	pub url: &'static str
+	pub access_token: String,
+	pub version: String,
+	pub group_id: String,
+	pub url: String,
+	pub client: reqwest::Client
 }
 
 impl VkData {
@@ -145,20 +147,39 @@ impl VkData {
 	//builders
 	pub fn new(token: &'static str) -> Self {
 		VkData {
-			access_token: token,
-			version:"5.92",
-			group_id:"",
-			url :"https://api.vk.com/method/"
+			access_token: token.to_string(),
+			version:"5.92".to_string(),
+			group_id:"".to_string(),
+			url :"https://api.vk.com/method/".to_string(),
+			client: reqwest::Client::new()
 		}
 	}
 	pub fn set_group_id(mut self, group_id: &'static str) -> Self {
-		self.group_id = group_id;
+		self.group_id = group_id.to_string();
 		self
+	}
+	//vk = VkData::new(""); vk.auth(login, password);
+	pub fn auth(mut self, login: &'static str, password: &'static str) -> Result<(Self, i64, i64), Box<Error>> {
+		let data: Value = self.client.get("https://oauth.vk.com/token")
+    	.query(&par![("grant_type", "password"), ("client_id", 2274003), ("client_secret", "hHbZxrka2uZ6jB1inYsH"), //for android client
+    		("username", login), (password, password), ("v", &self.version)])
+    	.send()?
+		.json()?;
+
+		if data["response"]!=Value::Null {
+			self.access_token = get!(data; "access_token")?;
+			return Ok((self, get!(data; "expires_in")?, get!(data; "user_id")?))
+		} else if data["error"]!=Value::Null {
+			return Err(From::from(format!("Error: {}", data["error"])))
+		} else {
+			return Err(From::from(data.to_string()))
+		}
+		
 	}
 	//call with group_id parameter
 	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
 		Result<Value, Box<Error>> {
-		parameters.put("group_id", self.group_id);
+		parameters.put("group_id", &self.group_id);
 		self.call(method, parameters)
 	}
 	//
@@ -166,11 +187,10 @@ impl VkData {
 		Result<Value, Box<Error>> {
 		let unk_err = "Unknown json from vk";
 
-		parameters.put("access_token", self.access_token);
-		parameters.put("v", self.version);
+		parameters.put("access_token", &self.access_token);
+		parameters.put("v", &self.version);
 
-		let client = reqwest::Client::new();
-		let data:Value = client.get(&(self.url.to_string()+method))
+		let data: Value = self.client.get(&(self.url.to_string()+method))
     	.query(&parameters)
     	.send()?
 		.json()?;
@@ -186,9 +206,7 @@ impl VkData {
 
 	#[allow(non_snake_case)]
 	pub fn groups_GetLongPollServer(&self) -> Result<DataOfServer, Box<Error>> {
-		let resp = self.call("groups.getLongPollServer",
-			par![("group_id", self.group_id)]
-		)?;
+		let resp = self.call_gi("groups.getLongPollServer", par![])?;
 		Ok(DataOfServer{
 			key: get!(resp; "key")?,
 			server: get!(resp; "server")?,
