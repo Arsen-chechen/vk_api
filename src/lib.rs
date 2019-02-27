@@ -159,9 +159,9 @@ impl VkData {
 		self
 	}
 	//vk = VkData::new(""); vk.auth(login, password);
-	pub fn auth(mut self, login: &'static str, password: &'static str) -> Result<(Self, i64, i64), Box<Error>> {
+	pub fn auth(mut self, login: &'static str, password: &'static str, client_id: i64, client_secret: &'static str) -> Result<(Self, i64, i64), Box<Error>> {
 		let data: Value = self.client.get("https://oauth.vk.com/token")
-    	.query(&par![("grant_type", "password"), ("client_id", 2274003), ("client_secret", "hHbZxrka2uZ6jB1inYsH"), //for android client
+    	.query(&par![("grant_type", "password"), ("client_id", client_id), ("client_secret", client_secret),
     		("username", login), (password, password), ("v", &self.version)])
     	.send()?
 		.json()?;
