@@ -3,7 +3,6 @@ extern crate serde_json;
 use std::boxed::Box;
 use std::error::Error;
 use serde_json::Value;
-extern crate rand;
 use std::string::ToString;
 
 
@@ -99,9 +98,9 @@ macro_rules! get {
 // Или vk.call("messages.getLongPollServer", ...) вызванный с токеном пользователя
 #[derive(Debug)]
 pub struct DataOfServer {
-	key: Box<str>,
-	server: Box<str>,
-	ts: Box<str>
+	key: String,
+	server: String,
+	ts: String
 }
 
 impl DataOfServer {
@@ -157,24 +156,6 @@ impl VkData {
 	pub fn set_group_id(mut self, group_id: &'static str) -> Self {
 		self.group_id = group_id.to_string();
 		self
-	}
-	//vk = VkData::new(""); vk.auth(login, password);
-	pub fn auth(mut self, login: &'static str, password: &'static str, client_id: i64, client_secret: &'static str) -> Result<(Self, i64, i64), Box<Error>> {
-		let data: Value = self.client.get("https://oauth.vk.com/token")
-    	.query(&par![("grant_type", "password"), ("client_id", client_id), ("client_secret", client_secret),
-    		("username", login), (password, password), ("v", &self.version)])
-    	.send()?
-		.json()?;
-
-		if data["response"]!=Value::Null {
-			self.access_token = get!(data; "access_token")?;
-			return Ok((self, get!(data; "expires_in")?, get!(data; "user_id")?))
-		} else if data["error"]!=Value::Null {
-			return Err(From::from(format!("Error: {}", data["error"])))
-		} else {
-			return Err(From::from(data.to_string()))
-		}
-		
 	}
 	//call with group_id parameter
 	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
