@@ -96,7 +96,7 @@ macro_rules! get {
 
 // Информация о long polling сервере, получаемая vk.groups_GetLongPollServer()'ом
 // Или vk.call("messages.getLongPollServer", ...) вызванный с токеном пользователя
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DataOfServer {
 	key: String,
 	server: String,
