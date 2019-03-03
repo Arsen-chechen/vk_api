@@ -132,7 +132,7 @@ let mut server_data: DataOfServer = vk.groups_GetLongPollServer().unwrap();
 }
 
 // можно назвать эту структуру "клиентом vk-api"
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VkData {
 	pub access_token: String,
 	pub version: String,
