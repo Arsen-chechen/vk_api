@@ -129,32 +129,45 @@ let mut server_data: DataOfServer = vk.groups_GetLongPollServer().unwrap();
 			return Err(From::from(unk_err))
 		}
 	}
+	
+	#[allow(non_snake_case)]
+	pub fn groups_GetLongPollServer(&self) -> Result<DataOfServer, Box<Error>> {
+		let resp = self.call_gi("groups.getLongPollServer", par![])?;
+		Ok(DataOfServer{
+			key: get!(resp; "key")?,
+			server: get!(resp; "server")?,
+			ts: get!(resp; "ts")?
+		})
+	}
 }
 
 // можно назвать эту структуру "клиентом vk-api"
 #[derive(Debug, Clone)]
-pub struct VkData {
+pub struct VK {
 	pub access_token: String,
-	pub version: String,
-	pub group_id: String,
-	pub url: String,
+	pub version: f32,
+	pub group_id: i64,
 	pub client: reqwest::Client
 }
 
-impl VkData {
+impl VK {
 
 	//builders
-	pub fn new(token: &'static str) -> Self {
+	pub fn from_token(token: String) -> Self {
 		VkData {
-			access_token: token.to_string(),
-			version:"5.92".to_string(),
-			group_id:"".to_string(),
-			url :"https://api.vk.com/method/".to_string(),
+			access_token: token,
+			version: 5.92,
+			group_id: 0,
 			client: reqwest::Client::new()
 		}
 	}
-	pub fn set_group_id(mut self, group_id: &'static str) -> Self {
-		self.group_id = group_id.to_string();
+	fn from_login(login: String, password: String) -> Self {
+		unimplemented!();
+		let token = String::new();
+		from_token(token)
+	}
+	pub fn with_group_id(mut self, group_id: &'static str) -> Self {
+		self.group_id = group_id;
 		self
 	}
 	//call with group_id parameter
@@ -171,7 +184,7 @@ impl VkData {
 		parameters.put("access_token", &self.access_token);
 		parameters.put("v", &self.version);
 
-		let data: Value = self.client.get(&(self.url.to_string()+method))
+		let data: Value = self.client.get(&format!("https://api.vk.com/method/{}", method))
     	.query(&parameters)
     	.send()?
 		.json()?;
@@ -183,15 +196,5 @@ impl VkData {
 		} else {
 			return Err(From::from(unk_err))
 		}
-	}
-
-	#[allow(non_snake_case)]
-	pub fn groups_GetLongPollServer(&self) -> Result<DataOfServer, Box<Error>> {
-		let resp = self.call_gi("groups.getLongPollServer", par![])?;
-		Ok(DataOfServer{
-			key: get!(resp; "key")?,
-			server: get!(resp; "server")?,
-			ts: get!(resp; "ts")?
-		})
 	}
 }
