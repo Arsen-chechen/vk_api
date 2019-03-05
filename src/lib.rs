@@ -4,7 +4,9 @@ use std::boxed::Box;
 use std::error::Error;
 use serde_json::Value;
 use std::string::ToString;
-
+use serde_json::value::Index;
+extern crate serde;
+use serde::de::DeserializeOwned;
 
 /*
 Черта была создана для того, чтобы удобно создавать Vec<(String, String)>.
@@ -88,56 +90,24 @@ macro_rules! par {
 примечание: В случае с сохранением значения типа &Value, возможно, будет удобнее писать
 	&Value[key];	
 */
+/*
 #[macro_export]
 macro_rules! get {
 	( $val:expr; $($x:expr),*) => (serde_json::from_value($val$([$x])*.clone()))
 }
-
-
-// Информация о long polling сервере, получаемая vk.groups_GetLongPollServer()'ом
-// Или vk.call("messages.getLongPollServer", ...) вызванный с токеном пользователя
-#[derive(Debug, Clone)]
-pub struct DataOfServer {
-	key: String,
-	server: String,
-	ts: String
-}
-
-impl DataOfServer {
-
-/*метод, автоматически опрашивающий сервер. Возвращает вектор update'ов, 
-автоматически подменяет ts. Пример:
-let mut server_data: DataOfServer = vk.groups_GetLongPollServer().unwrap();
-	loop {
-		let updates = server_data.poll().unwrap();
-		for update in updates {
-			handler(update, vk).unwrap();
-		}	
-	}
 */
-	pub fn poll_group(&mut self, wait: i8) -> Result<Vec<Value>, Box<Error>> {
-		let unk_err = "Unknown json from vk";
-		let resp: Value = reqwest::get(
-			format!("{server}?act=a_check&key={key}&ts={ts}&wait={w}", server=self.server, key=self.key, ts=self.ts, w=wait)
-		.as_str())?
-		.json()?;
-
-		if resp["updates"]!=Value::Null {
-			self.ts = get!(resp; "ts")?;
-			return Ok(get!(resp; "updates")?)
-		} else {
-			return Err(From::from(unk_err))
+struct Response {
+	value:Value
+}
+impl Response {
+	pub fn index(self, index: Index) -> Self {
+		Response {
+			value: self.value[index].clone()
 		}
 	}
-	
-	#[allow(non_snake_case)]
-	pub fn groups_GetLongPollServer(&self) -> Result<DataOfServer, Box<Error>> {
-		let resp = self.call_gi("groups.getLongPollServer", par![])?;
-		Ok(DataOfServer{
-			key: get!(resp; "key")?,
-			server: get!(resp; "server")?,
-			ts: get!(resp; "ts")?
-		})
+	pub fn get<D>(self, index: Index) -> Result<D, Box<Error>>
+	where D: DeserializeOwned {
+		Ok(serde_json::from_value(self.index(index).value)?)
 	}
 }
 
@@ -152,30 +122,6 @@ pub struct VK {
 
 impl VK {
 
-	//builders
-	pub fn from_token(token: String) -> Self {
-		VkData {
-			access_token: token,
-			version: 5.92,
-			group_id: 0,
-			client: reqwest::Client::new()
-		}
-	}
-	fn from_login(login: String, password: String) -> Self {
-		unimplemented!();
-		let token = String::new();
-		from_token(token)
-	}
-	pub fn with_group_id(mut self, group_id: &'static str) -> Self {
-		self.group_id = group_id;
-		self
-	}
-	//call with group_id parameter
-	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
-		Result<Value, Box<Error>> {
-		parameters.put("group_id", &self.group_id);
-		self.call(method, parameters)
-	}
 	//
 	pub fn call(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
 		Result<Value, Box<Error>> {
@@ -196,5 +142,29 @@ impl VK {
 		} else {
 			return Err(From::from(unk_err))
 		}
+	}
+	//call with group_id parameter
+	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
+		Result<Value, Box<Error>> {
+		parameters.put("group_id", &self.group_id);
+		self.call(method, parameters)
+	}
+	//builders
+	pub fn from_token(token: String) -> Self {
+		VK {
+			access_token: token,
+			version: 5.92,
+			group_id: 0,
+			client: reqwest::Client::new()
+		}
+	}
+	#[allow(dead_code, unused_variables)]
+	fn from_login(login: String, password: String) -> Self {
+		let token = String::new();
+		VK::from_token(token)
+	}
+	pub fn with_group_id(mut self, group_id: i64) -> Self {
+		self.group_id = group_id;
+		self
 	}
 }
