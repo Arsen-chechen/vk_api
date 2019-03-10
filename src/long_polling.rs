@@ -1,4 +1,5 @@
-use super::{VK, par, Response};
+use crate::{VK, par};
+use crate::response::{Response, GettingFromResponseFor};
 
 use std::error::Error;
 use serde_json::Value;
@@ -27,12 +28,12 @@ trait Poll: Sized {
 
 		loop {
 			for update in server.poll().unwrap() {
-				handler(Response{value:update}, vk);
+				handler(update, vk);
 			}	
 		}
 	}
 
-	fn poll(&mut self) -> Result<Vec<Value>, Box<Error>>;
+	fn poll(&mut self) -> Result<Vec<Response>, Box<Error>>;
 
 	//builders
 	fn get_long_poll_server(vk: &VK) -> Result<Self, Box<Error>>;
@@ -55,13 +56,13 @@ pub struct GroupPolling {
 }
 
 impl Poll for GroupPolling {
-	fn poll(&mut self) -> Result<Vec<Value>, Box<Error>> {
+	fn poll(&mut self) -> Result<Vec<Response>, Box<Error>> {
 		let unk_err = "Unknown json from vk";
 		let resp: Value = reqwest::get(
 			format!("{server}?act=a_check&key={key}&ts={ts}&wait={w}", server=self.server, key=self.key, ts=self.ts, w=self.wait)
 		.as_str())?
 		.json()?;
-		let response = Response{value:resp.clone()};
+		let response = Response(resp.clone());
 
 		if resp["updates"]!=Value::Null {
 			self.ts = response.get("ts")?;
@@ -74,8 +75,8 @@ impl Poll for GroupPolling {
 	
 	fn get_long_poll_server(vk: &VK) -> Result<GroupPolling, Box<Error>> {
 		let resp = vk.call_gi("groups.getLongPollServer", par![])?;
-		let response = Response{value:resp};
-		let heh = response.get("heh")?;
+		let response = Response(resp);
+		let heh = response.g("heh");
 		println!("{:#?}", heh);
 		Ok(GroupPolling{
 			key: response.get("key")?,

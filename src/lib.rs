@@ -9,7 +9,9 @@ extern crate serde;
 use serde::de::DeserializeOwned;
 use std::ops::Index as IndexTrait;
 
-mod long_polling; 
+pub mod long_polling;
+pub mod response;
+pub use response::{Response, GettingFromResponseFor}; 
 
 /*
 Черта была создана для того, чтобы удобно создавать Vec<(String, String)>.
@@ -99,18 +101,6 @@ macro_rules! get {
 	( $val:expr; $($x:expr),*) => (serde_json::from_value($val$([$x])*.clone()))
 }
 */
-
-#[derive(Clone, Debug)]
-pub struct Response {
-	value:Value
-}
-impl Response {
-	pub fn get<D, I: 'static>(&self, index: I) -> Result<D, Box<Error>>
-	where D: DeserializeOwned,
-	I: Index+Sized {
-		Ok(serde_json::from_value(self.value[index].clone())?)
-	}
-}
 
 
 
