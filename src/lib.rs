@@ -3,10 +3,13 @@ extern crate serde_json;
 use std::boxed::Box;
 use std::error::Error;
 use serde_json::Value;
-use std::string::ToString;
 use serde_json::value::Index;
+use std::string::ToString;
 extern crate serde;
 use serde::de::DeserializeOwned;
+use std::ops::Index as IndexTrait;
+
+mod long_polling; 
 
 /*
 Черта была создана для того, чтобы удобно создавать Vec<(String, String)>.
@@ -96,20 +99,20 @@ macro_rules! get {
 	( $val:expr; $($x:expr),*) => (serde_json::from_value($val$([$x])*.clone()))
 }
 */
-struct Response {
+
+#[derive(Clone, Debug)]
+pub struct Response {
 	value:Value
 }
 impl Response {
-	pub fn index(self, index: Index) -> Self {
-		Response {
-			value: self.value[index].clone()
-		}
-	}
-	pub fn get<D>(self, index: Index) -> Result<D, Box<Error>>
-	where D: DeserializeOwned {
-		Ok(serde_json::from_value(self.index(index).value)?)
+	pub fn get<D, I: 'static>(&self, index: I) -> Result<D, Box<Error>>
+	where D: DeserializeOwned,
+	I: Index+Sized {
+		Ok(serde_json::from_value(self.value[index].clone())?)
 	}
 }
+
+
 
 // можно назвать эту структуру "клиентом vk-api"
 #[derive(Debug, Clone)]

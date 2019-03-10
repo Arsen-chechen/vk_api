@@ -1,14 +1,33 @@
-trait Poll {
-	fn polling(handler: Fn) {
-		polling_with_wait(25, handler)
+use super::{VK, par, Response};
+
+use std::error::Error;
+use serde_json::Value;
+/*
+extern crate reqwest;
+extern crate serde_json;
+use std::boxed::Box;
+
+
+use serde_json::value::Index;
+use std::string::ToString;
+extern crate serde;
+use serde::de::DeserializeOwned;
+use std::ops::Index as IndexTrait;
+*/
+type Handler = &'static Fn(Response, &VK);
+
+trait Poll: Sized {
+	fn polling(vk: &VK, handler: Handler) {
+		Self::polling_with_wait(vk, 25, handler)
 	}
-	fn polling_with_wait(wait: u8, handler: Fn) {
-		let server = get_long_poll_server()
+	fn polling_with_wait(vk: &VK, wait: u8, handler: Handler) {
+		let mut server = Self::get_long_poll_server(vk)
+		.unwrap()
 		.with_wait(wait);
 
 		loop {
-			for update in server_data.poll().unwrap() {
-				handler(update, vk).unwrap();
+			for update in server.poll().unwrap() {
+				handler(Response{value:update}, vk);
 			}	
 		}
 	}
@@ -16,21 +35,19 @@ trait Poll {
 	fn poll(&mut self) -> Result<Vec<Value>, Box<Error>>;
 
 	//builders
-	fn get_long_poll_server(vk: VK) -> Self;
+	fn get_long_poll_server(vk: &VK) -> Result<Self, Box<Error>>;
 
-	fn with_wait(mut self, wait: u8) -> Self {
-		self.wait = wait;
-		self
-	}
+	#[allow(patterns_in_fns_without_body)]
+	fn with_wait(mut self, wait: u8) -> Self;
 }
 
 #[derive(Debug)]
 struct UserPolling {
-	field: Type
+	field: String
 }
 
-#[derive(Debug)]
-struct GroupPolling {
+#[derive(Debug, Clone)]
+pub struct GroupPolling {
 	key: String,
 	server: String,
 	ts: String,
@@ -38,29 +55,38 @@ struct GroupPolling {
 }
 
 impl Poll for GroupPolling {
-	pub fn poll(&mut self) -> Result<Vec<Value>, Box<Error>> {
+	fn poll(&mut self) -> Result<Vec<Value>, Box<Error>> {
 		let unk_err = "Unknown json from vk";
 		let resp: Value = reqwest::get(
 			format!("{server}?act=a_check&key={key}&ts={ts}&wait={w}", server=self.server, key=self.key, ts=self.ts, w=self.wait)
 		.as_str())?
 		.json()?;
+		let response = Response{value:resp.clone()};
 
 		if resp["updates"]!=Value::Null {
-			self.ts = get!(resp; "ts")?;
-			return Ok(get!(resp; "updates")?)
+			self.ts = response.get("ts")?;
+			return Ok(response.get("updates")?)
 		} else {
 			return Err(From::from(unk_err))
 		}
 	}
 	
 	
-	pub fn get_long_poll_server(vk: VK) -> Result<DataOfServer, Box<Error>> {
+	fn get_long_poll_server(vk: &VK) -> Result<GroupPolling, Box<Error>> {
 		let resp = vk.call_gi("groups.getLongPollServer", par![])?;
-		Ok(DataOfServer{
-			key: get!(resp; "key")?,
-			server: get!(resp; "server")?,
-			ts: get!(resp; "ts")?,
+		let response = Response{value:resp};
+		let heh = response.get("heh")?;
+		println!("{:#?}", heh);
+		Ok(GroupPolling{
+			key: response.get("key")?,
+			server: response.get("server")?,
+			ts: response.get("ts")?,
 			wait: 25
 		})
+	}
+
+	fn with_wait(mut self, wait: u8) -> Self {
+		self.wait = wait;
+		self
 	}
 }
