@@ -3,15 +3,12 @@ extern crate serde_json;
 use std::boxed::Box;
 use std::error::Error;
 use serde_json::Value;
-use serde_json::value::Index;
 use std::string::ToString;
 extern crate serde;
-use serde::de::DeserializeOwned;
-use std::ops::Index as IndexTrait;
 
 pub mod long_polling;
 pub mod response;
-pub use response::{Response, GettingFromResponseFor}; 
+pub use response::Response; 
 
 /*
 Черта была создана для того, чтобы удобно создавать Vec<(String, String)>.
@@ -59,7 +56,7 @@ macro_rules! par {
 
 	Но постойте, ведь раньше можно было напсать параметры хотя бы в одну строку 
 	(пусть с повторяющимся кодом, но всё же), а теперь придётся писать так много строк?!
-	Конечно же нет, ведь я написал и  (сильно) упрощённую версию vec!, которую назвал par!
+	Конечно же нет, ведь я написал и (сильно) упрощённую версию vec!, которую назвал par!
 	и с помощью неё можно снова писать параметры в одну строку:
 	let params2 = par![("id", 1234.5), ("text", "privet"), ("dest_id", 1337)];
 
@@ -67,39 +64,6 @@ macro_rules! par {
 	вы можете использовать put (но только с mut кортежами):
 	let mut params3 = par![];
 	params3.put("heh", "mda".to_string); //Да, String тоже можно передавать
-*/
-
-/*макрос, написанный для десериализации в  serde_json, который позволяет 
-в одну легкочитаемую строчку без повторения кода получать значения 
-определённого(!) типа. Компилятор может выдать ошибку "Cannot infer type", 
-если тип будет не определён. Примеры использования:
- get!(Value; key, key) //Так же как Value[key][key]
-
- let john = json!({
-	"name": "John Doe",
-	"age": 43,
-	"phones": [
-	    "+44 1234567",
-		"+44 2345678"
-	]
-	});
-	let new: String = get!(john; "phones", 0).unwrap();
-	let old: String = serde_json::from_value(john["phones"][0].clone()).unwrap();
-	assert_eq!(new, old);
-
-Вызов без параметров:
-	let rob: Value = get!(john;).unwrap();
-	let first: String = serde_json::from_value(rob["phones"][0].clone()).unwrap();
-	println!("{}", first);
-
-примечание: В случае с сохранением значения типа &Value, возможно, будет удобнее писать
-	&Value[key];	
-*/
-/*
-#[macro_export]
-macro_rules! get {
-	( $val:expr; $($x:expr),*) => (serde_json::from_value($val$([$x])*.clone()))
-}
 */
 
 
@@ -115,13 +79,9 @@ pub struct VK {
 
 impl VK {
 
-	//
-	pub fn call(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
-		Result<Value, Box<Error>> {
+	//call without any additional parameters
+	pub fn call_without(&self, method: &str, parameters: Vec<(String, String)>) -> Result<Response, Box<Error>> {
 		let unk_err = "Unknown json from vk";
-
-		parameters.put("access_token", &self.access_token);
-		parameters.put("v", &self.version);
 
 		let data: Value = self.client.get(&format!("https://api.vk.com/method/{}", method))
     	.query(&parameters)
@@ -129,16 +89,26 @@ impl VK {
 		.json()?;
 
 		if data["response"]!=Value::Null {
-			return Ok(data["response"].clone())
+			return Ok(Response(data["response"].clone()))
 		} else if data["error"]!=Value::Null {
 			return Err(From::from(format!("Error: {}", data["error"])))
 		} else {
 			return Err(From::from(unk_err))
 		}
 	}
+
+	//call with token and v
+	pub fn call(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
+		Result<Response, Box<Error>> {
+
+		parameters.put("access_token", &self.access_token);
+		parameters.put("v", &self.version);
+
+		self.call_without(method, parameters)
+	}
 	//call with group_id parameter
 	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
-		Result<Value, Box<Error>> {
+		Result<Response, Box<Error>> {
 		parameters.put("group_id", &self.group_id);
 		self.call(method, parameters)
 	}

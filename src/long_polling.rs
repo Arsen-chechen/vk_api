@@ -1,22 +1,12 @@
 use crate::{VK, par};
-use crate::response::{Response, GettingFromResponseFor};
+use crate::response::Response;
 
 use std::error::Error;
 use serde_json::Value;
-/*
-extern crate reqwest;
-extern crate serde_json;
-use std::boxed::Box;
 
-
-use serde_json::value::Index;
-use std::string::ToString;
-extern crate serde;
-use serde::de::DeserializeOwned;
-use std::ops::Index as IndexTrait;
-*/
+#[allow(dead_code)]
 type Handler = &'static Fn(Response, &VK);
-
+ 
 trait Poll: Sized {
 	fn polling(vk: &VK, handler: Handler) {
 		Self::polling_with_wait(vk, 25, handler)
@@ -42,9 +32,10 @@ trait Poll: Sized {
 	fn with_wait(mut self, wait: u8) -> Self;
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 struct UserPolling {
-	field: String
+	heh: String
 }
 
 #[derive(Debug, Clone)]
@@ -65,8 +56,8 @@ impl Poll for GroupPolling {
 		let response = Response(resp.clone());
 
 		if resp["updates"]!=Value::Null {
-			self.ts = response.get("ts")?;
-			return Ok(response.get("updates")?)
+			self.ts = response.get_string("ts")?;
+			return Ok(response.get_vec("updates")?)
 		} else {
 			return Err(From::from(unk_err))
 		}
@@ -74,14 +65,13 @@ impl Poll for GroupPolling {
 	
 	
 	fn get_long_poll_server(vk: &VK) -> Result<GroupPolling, Box<Error>> {
-		let resp = vk.call_gi("groups.getLongPollServer", par![])?;
-		let response = Response(resp);
+		let response = vk.call_gi("groups.getLongPollServer", par![])?;
 		let heh = response.g("heh");
 		println!("{:#?}", heh);
 		Ok(GroupPolling{
-			key: response.get("key")?,
-			server: response.get("server")?,
-			ts: response.get("ts")?,
+			key: response.get_string("key")?,
+			server: response.get_string("server")?,
+			ts: response.get_string("ts")?,
 			wait: 25
 		})
 	}
