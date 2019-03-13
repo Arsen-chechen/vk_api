@@ -56,8 +56,8 @@ impl Poll for GroupPolling {
 		let response = Response(resp.clone());
 
 		if resp["updates"]!=Value::Null {
-			self.ts = response.get_string("ts")?;
-			return Ok(response.get_vec("updates")?)
+			self.ts = response.gets("ts")?;
+			return Ok(response.getv("updates")?)
 		} else {
 			return Err(From::from(unk_err))
 		}
@@ -69,9 +69,9 @@ impl Poll for GroupPolling {
 		let heh = response.g("heh");
 		println!("{:#?}", heh);
 		Ok(GroupPolling{
-			key: response.get_string("key")?,
-			server: response.get_string("server")?,
-			ts: response.get_string("ts")?,
+			key: response.gets("key")?,
+			server: response.gets("server")?,
+			ts: response.gets("ts")?,
 			wait: 25
 		})
 	}

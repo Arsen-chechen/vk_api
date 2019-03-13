@@ -9,16 +9,16 @@ pub struct Response(pub Value);
 
 
 impl Response {
-	pub fn g<I>(&self, index: I) -> Response
+	pub fn g<I>(&self, index: I) -> Option<Response>
 	where I: Index + Sized {
-		Response(self.0[index].clone())
+		Some(Response(self.0[index].clone()))
 	}
-	pub fn get_string<I>(&self, index: I) -> Result<String, Error>
+	pub fn gets<I>(&self, index: I) -> Result<String, Error>
 	where I: Index + Sized {
 		serde_json::from_value(self.g(index).0)
 	}
 	//may not deserialize
-	pub fn get_vec<I>(&self, index: I) -> Result<Vec<Response>, Box<Error>>
+	pub fn getv<I>(&self, index: I) -> Result<Vec<Response>, Box<Error>>
 	where I: Index + Sized {
 		let temp: Vec<Value> = serde_json::from_value(self.g(index).0)?;
 		let mut ret: Vec<Response> = Vec::new();
@@ -27,15 +27,20 @@ impl Response {
 		}
 		Ok(ret)
 	}
-	pub fn get_i64<I>(&self, index: I) -> Result<i64, Error>
+	pub fn geti<I>(&self, index: I) -> Result<i64, Error>
+	where I: Index + Sized {
+		use serde_json::from_value as fv;
+		match self.g(index) {
+			Some(r) => fv(r.0),
+			None => Error
+		}
+		serde_json::from_value(self.g(index).0)
+	}
+	pub fn getf<I>(&self, index: I) -> Result<f64, Error>
 	where I: Index + Sized {
 		serde_json::from_value(self.g(index).0)
 	}
-	pub fn get_f64<I>(&self, index: I) -> Result<f64, Error>
-	where I: Index + Sized {
-		serde_json::from_value(self.g(index).0)
-	}
-	pub fn get_bool<I>(&self, index: I) -> Result<bool, Error>
+	pub fn getb<I>(&self, index: I) -> Result<bool, Error>
 	where I: Index + Sized {
 		serde_json::from_value(self.g(index).0)
 	}
@@ -75,16 +80,10 @@ impl Response {
 		}"#;
 
 		let r = Response(serde_json::from_str(data).unwrap()).g("response");
-		if r.g(0).get_i64("has_mobile").unwrap() == 1 {
-			println!("Hello, mss's {} {}, i will call you at the number {}, yesss!", r.g(0).get_string("first_name").unwrap(), r.g(0).get_string("last_name").unwrap() , r.g(0).get_string("mobile_phone").unwrap());
-		} else {
-			panic!("...How did it happen...");
-		}
-		let religion = r.g(0).g("personal").get_string("religion").unwrap();
-		if religion == "Pravoslavie"{
-			panic!(format!("don't talk to {}", r.g(0).get_string("first_name").unwrap()));
-		} else if religion == "Mormon" {
-			println!("strange but ok");
-		}
-
+		let u = r.g(0).unwrap();
+		assert_eq!(u.geti("has_mobile").unwrap(), 1);
+		assert_eq!(u.gets("has_mobile").unwrap(), "1");
+		let personal = u.g("personal").unwrap();
+		assert_eq!(personal.gets("religion").unwrap(), "Mormon");
+		assert_eq!(u.gets("can_write_private_message").unwrap(), "5331")
 	}
