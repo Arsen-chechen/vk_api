@@ -2,6 +2,7 @@ extern crate serde_json;
 use serde_json::value::Index;
 use serde_json::Value;
 use serde_json::Error;
+use serde_json::from_value as fv;
 
 
 #[derive(Clone, Debug)]
@@ -14,13 +15,17 @@ impl Response {
 		Some(Response(self.0[index].clone()))
 	}
 	pub fn gets<I>(&self, index: I) -> Result<String, Error>
-	where I: Index + Sized {
-		serde_json::from_value(self.g(index).0)
+	where I: Index + Sized + Copy {
+		let ret: Result<String, Error> = fv(self.g(index).unwrap().0);
+		match ret {
+			Err(ref e) if e.to_string().contains("invalid type") => Ok(self.g(index).unwrap().0.to_string()),
+			_ => ret
+		}
 	}
 	//may not deserialize
 	pub fn getv<I>(&self, index: I) -> Result<Vec<Response>, Box<Error>>
 	where I: Index + Sized {
-		let temp: Vec<Value> = serde_json::from_value(self.g(index).0)?;
+		let temp: Vec<Value> = fv(self.g(index).unwrap().0)?;
 		let mut ret: Vec<Response> = Vec::new();
 		for t in temp {
 			ret.push(Response(t));
@@ -29,20 +34,15 @@ impl Response {
 	}
 	pub fn geti<I>(&self, index: I) -> Result<i64, Error>
 	where I: Index + Sized {
-		use serde_json::from_value as fv;
-		match self.g(index) {
-			Some(r) => fv(r.0),
-			None => Error
-		}
-		serde_json::from_value(self.g(index).0)
+		fv(self.g(index).unwrap().0)
 	}
 	pub fn getf<I>(&self, index: I) -> Result<f64, Error>
 	where I: Index + Sized {
-		serde_json::from_value(self.g(index).0)
+		fv(self.g(index).unwrap().0)
 	}
 	pub fn getb<I>(&self, index: I) -> Result<bool, Error>
 	where I: Index + Sized {
-		serde_json::from_value(self.g(index).0)
+		fv(self.g(index).unwrap().0)
 	}
 }
 
@@ -79,11 +79,12 @@ impl Response {
 				}]
 		}"#;
 
-		let r = Response(serde_json::from_str(data).unwrap()).g("response");
+		let r = Response(serde_json::from_str(data).unwrap()).g("response").unwrap();
 		let u = r.g(0).unwrap();
 		assert_eq!(u.geti("has_mobile").unwrap(), 1);
 		assert_eq!(u.gets("has_mobile").unwrap(), "1");
 		let personal = u.g("personal").unwrap();
 		assert_eq!(personal.gets("religion").unwrap(), "Mormon");
-		assert_eq!(u.gets("can_write_private_message").unwrap(), "5331")
+		assert_eq!(u.g("city").unwrap().gets("id").unwrap(), "5331");
+		u.gets("heh").unwrap();
 	}
