@@ -12,7 +12,11 @@ pub struct Response(pub Value);
 impl Response {
 	pub fn g<I>(&self, index: I) -> Option<Response>
 	where I: Index + Sized {
-		Some(Response(self.0[index].clone()))
+		let val = &self.0[index];
+		if *val == Value::Null {
+			return None
+		}
+		Some(Response(val.clone()))
 	}
 	pub fn gets<I>(&self, index: I) -> Result<String, Error>
 	where I: Index + Sized + Copy {
@@ -86,5 +90,5 @@ impl Response {
 		let personal = u.g("personal").unwrap();
 		assert_eq!(personal.gets("religion").unwrap(), "Mormon");
 		assert_eq!(u.g("city").unwrap().gets("id").unwrap(), "5331");
-		u.gets("heh").unwrap();
+		assert!(u.gets("heh").is_err());
 	}
