@@ -26,10 +26,10 @@ fn main() {
 
 	assert_eq!(last_name, second_name);
 
-	GroupPolling::polling(vk, handler);
+	GroupPolling::polling(&vk, &handler);
 }
 
-fn handler(vk: VK, update: Response) {
+fn handler(update: Response, vk: &VK) {
 	let obj = update.get("object")
 		.expect("object not found in the update");
 	let update_type = update.get("type")
@@ -38,7 +38,7 @@ fn handler(vk: VK, update: Response) {
 		.expect("vk return not valid json");
 	if update_type == "message_new" {
 		let user_id: String = obj.get("from_id").unwrap().to_string().unwrap();
-		let user = vk.call("users.get", par![("user_ids", user_id), ("name_case", "Nom")])
+		let user = vk.call("users.get", par![("user_ids", user_id.clone()), ("name_case", "Nom")])
 			.unwrap()
 			.get(0);
 		let username: String = user.and_get("first_name")
