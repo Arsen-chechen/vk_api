@@ -21,7 +21,8 @@ fn main() {
 	let second_name: String = users.get(0)
 		.and_get("last_name")
 		.ok_or(not_found("0 or last_name", "users"))
-		.and_then(to_string);
+		.and_then(to_string)
+		.unwrap();
 
 	assert_eq!(last_name, second_name);
 

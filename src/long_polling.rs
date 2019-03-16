@@ -9,7 +9,7 @@ use crate::response::closures::{to_string, to_vec, not_found};
 #[allow(dead_code)]
 type Handler = &'static Fn(Response, &VK);
  
-trait Poll: Sized {
+pub trait Poll: Sized {
 	fn polling(vk: &VK, handler: Handler) {
 		Self::polling_with_wait(vk, 25, handler)
 	}
