@@ -21,7 +21,7 @@ pub trait PutInAString {
 	fn put<P, V>(&mut self, key: P, val: V)
 	where P:ToString, V:ToString;
 }
-impl PutInAStrings for Vec<(String, String)> {
+impl PutInAString for Vec<(String, String)> {
 	fn put<P, V>(&mut self, key: P, val: V)
 	where P:ToString, V:ToString {
 		self.push((key.to_string(), val.to_string()));
