@@ -17,7 +17,7 @@ pub use response::Response;
 Эта черта используется мной для того, чтобы отдавать функции параметры для web-api 
 вида key=value. Поэтому все значение преобразуются в string, тип удобный для web.
 */
-pub trait PutInAStrings {
+pub trait PutInAString {
 	fn put<P, V>(&mut self, key: P, val: V)
 	where P:ToString, V:ToString;
 }
