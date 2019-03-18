@@ -95,14 +95,14 @@ impl AndThenGetting for Result<Response, RE> {
 	}]
 }"#;
 
-		let r: Option<Response> = Response(serde_json::from_str(data).unwrap()).get("response");
-		let u: Option<Response> = r.and_get(0);
+		let r = Response(serde_json::from_str(data).unwrap()).get("response");
+		let u = r.and_get(0);
 		assert_eq!(u.and_get("has_mobile").unwrap().to_i64().unwrap(), 1);
 		assert_eq!(u.and_get("has_mobile").unwrap().to_string().unwrap(), "1");
 		let personal: Response = u.and_get("personal").unwrap();
 		assert_eq!(personal.get("religion").unwrap().to_string().unwrap(), "Mormon");
 		assert_eq!(u.and_get("city").and_get("id").unwrap().to_string().unwrap(), "5331");
-		assert!(u.and_get("heh").is_none());
+		assert!(u.and_get("heh").is_err());
 		let city: &str = r#"{"id":5331,"title":"Los Angeles"}"#;
 		assert_eq!(r.unwrap().get(0).and_get("city").unwrap().to_string().unwrap(), city);
 	}

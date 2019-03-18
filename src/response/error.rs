@@ -66,3 +66,33 @@ impl From<reqwest::Error> for ResponseError {
 		ResponseError::ReqwestError(error)
 	}
 }
+
+
+#[cfg(test)]
+use ResponseError as RE;
+use std::error::Error;
+	#[test]
+	pub fn test_field_not_found() {
+		assert_eq!(RE::field_not_found("uh".to_string(), "heh".to_string()).description(),
+		"field `uh` not found in json: heh"
+		)
+	}
+	#[test]
+	pub fn test_no_important_fields_found() {
+		assert_eq!(RE::no_important_fields_found("Something".to_string()).description(),
+		r#"Something went wrong. 
+VK returned data in which there was no important fields: Something"#
+		)
+	}
+	#[test]
+	pub fn test_invalid_json() {
+		assert_eq!(RE::invalid_json("Something".to_string()).description(),
+		"Json is not valid and cannot be recognized. Json: Something"
+		)
+	}
+	#[test]
+	pub fn test_server_error() {
+		assert_eq!(RE::server_error("Something".to_string()).description(),
+		"The server returned an error. Error: Something"
+		)
+	}
