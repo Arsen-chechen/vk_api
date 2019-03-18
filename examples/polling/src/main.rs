@@ -5,8 +5,9 @@ use vk_api::long_polling::{GroupPolling, Poll};
 
 use vk_api::response::closures::{not_found, to_string};
 
+extern crate rand;
 fn main() {
-	let group_id = 1234;
+	let group_id = 12345;
 	let vk = VK::from_token("token".to_owned())
 		.with_group_id(group_id);
 	let users: Response = vk.call("users.get", par!(("user_ids", 1)))
@@ -45,7 +46,11 @@ fn handler(update: Response, vk: &VK) {
 			.expect("when calling the `users.get` some field was not found")
 			.to_string()
 			.expect("when calling the `users.get` something went wrong");
-		vk.call_gi("message.send", par![("user_id", user_id), ("text", format!("{}, капец тебе! Я только что узнал твой адрес. Жди.", username))])
+		vk.call_gi("messages.send", 
+			par![("user_id", user_id),
+				("random_id", rand::random::<i32>()),
+				("message", format!("{}, капец тебе! Я только что узнал твой адрес. Жди.", username))
+				])
 			.unwrap();
 	}
 }

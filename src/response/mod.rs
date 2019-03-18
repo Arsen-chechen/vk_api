@@ -6,6 +6,7 @@ use serde_json::error::Error;
 pub use serde_json::from_value as fv;
 
 pub mod closures;
+pub mod error;
 
 #[derive(Clone, Debug)]
 pub struct Response(pub Value);

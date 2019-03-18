@@ -1,14 +1,14 @@
 extern crate reqwest;
 extern crate serde_json;
-use std::boxed::Box;
+//use std::boxed::Box;
 use std::error::Error;
-use serde_json::Value;
 use std::string::ToString;
 extern crate serde;
 
 pub mod long_polling;
 pub mod response;
 pub use response::Response; 
+use response::error::ResponseError as RE;
 
 /*
 Черта была создана для того, чтобы удобно создавать Vec<(String, String)>.
@@ -78,28 +78,27 @@ pub struct VK {
 }
 
 impl VK {
-
 	//call without any additional parameters
-	pub fn call_without(&self, method: &str, parameters: Vec<(String, String)>) -> Result<Response, Box<Error>> {
-		let unk_err = "Unknown json from vk";
-
-		let data: Value = self.client.get(&format!("https://api.vk.com/method/{}", method))
+	pub fn call_without<SE>(&self, method: &str, parameters: Vec<(String, String)>) ->
+	Result<Response, SE> where SE: Error + Sized {
+		let raw_data = self.client.get(&format!("https://api.vk.com/method/{}", method))
     	.query(&parameters)
     	.send()?
 		.json()?;
 
-		if data["response"]!=Value::Null {
-			return Ok(Response(data["response"].clone()))
-		} else if data["error"]!=Value::Null {
-			return Err(From::from(format!("Error: {}", data["error"])))
-		} else {
-			return Err(From::from(unk_err))
+		let data = Response(raw_data);
+		let response = data.get("response");
+		let error = data.get("error");
+		match (response, error) {
+			(Some(r), None) => Ok(r),
+			(None, Some(e)) => RE::ServerError(e.to_string()?),
+			(_, _) => RE::NoImportantFieldsFound(data.to_string()?),
 		}
-	}
+}
 
 	//call with token and v
-	pub fn call(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
-		Result<Response, Box<Error>> {
+	pub fn call<SE>(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
+		Result<Response, SE> where SE: Error + Sized {
 
 		parameters.put("access_token", &self.access_token);
 		parameters.put("v", &self.version);
@@ -107,8 +106,8 @@ impl VK {
 		self.call_without(method, parameters)
 	}
 	//call with group_id parameter
-	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
-		Result<Response, Box<Error>> {
+	pub fn call_gi<SE>(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
+		Result<Response, SE> where SE: Error + Sized {
 		parameters.put("group_id", &self.group_id);
 		self.call(method, parameters)
 	}

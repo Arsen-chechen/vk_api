@@ -1,8 +1,9 @@
 [package]
-name = "new_example"
+name = "polling"
 version = "0.1.0"
 authors = ["Arsen <moonzy53@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 vk_api = { git = "https://github.com/Arsen-chechen/vk_api"}
+rand = "0.6.5"
