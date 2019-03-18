@@ -11,19 +11,14 @@
 ///   |     ------------------------------------------------ found signature of `for<'r> fn(&'r response::Response) -> _`
 
 use crate::response::Response;
-use serde_json::Error;
+use crate::response::error::ResponseError as RE;
 
-pub fn to_string(resp: Response) -> Result<String, Error> {resp.to_string()}
+pub fn to_string(resp: Response) -> Result<String, RE> {resp.to_string()}
 
-pub fn to_vec(resp: Response) -> Result<Vec<Response>, Error> {resp.to_vec()}
+pub fn to_vec(resp: Response) -> Result<Vec<Response>, RE> {resp.to_vec()}
 
-pub fn to_i64(resp: Response) -> Result<i64, Error> {resp.to_i64()}
+pub fn to_i64(resp: Response) -> Result<i64, RE> {resp.to_i64()}
 
-pub fn to_f64(resp: Response) -> Result<f64, Error> {resp.to_f64()}
+pub fn to_f64(resp: Response) -> Result<f64, RE> {resp.to_f64()}
 
-pub fn to_bool(resp: Response) -> Result<bool, Error> {resp.to_bool()}
-
-pub fn not_found(what: &str, from_what: &str) -> Error {
-	use serde::de::Error as TraitError;
-	Error::custom(format!("key `{}` not found in the `{}`", what, from_what))
-}
+pub fn to_bool(resp: Response) -> Result<bool, RE> {resp.to_bool()}

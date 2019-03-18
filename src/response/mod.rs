@@ -2,6 +2,7 @@ extern crate serde_json;
 extern crate serde;
 use serde_json::value::Index;
 use serde_json::Value;
+use crate::response::error::ResponseError as RE;
 use serde_json::error::Error;
 pub use serde_json::from_value as fv;
 
@@ -13,23 +14,23 @@ pub struct Response(pub Value);
 
 
 impl Response {
-	pub fn get<I>(&self, index: I) -> Option<Response>
-	where I: Index + Sized {
-		let val = &self.0[index];
+	pub fn get<I>(&self, index: I) -> Result<Response, RE>
+	where I: Index + Sized + ToString + Clone {
+		let val = &self.0[index.clone()];
 		if *val == Value::Null {
-			return None
+			return Err(RE::field_not_found(index.clone().to_string(), self.to_string()?))
 		}
-		Some(Response(val.clone()))
+		Ok(Response(val.clone()))
 	}
-	pub fn to_string(&self) -> Result<String, Error> {
+	pub fn to_string(&self) -> Result<String, RE> {
 		let ret: Result<String, Error> = fv(self.0.clone());
 		match ret {
 			Err(ref e) if e.to_string().contains("invalid type") => Ok(self.0.clone().to_string()),
-			_ => ret
+			_ => Ok(ret?)
 		}
 	}
 	//may not deserialize
-	pub fn to_vec(&self) -> Result<Vec<Response>, Error> {
+	pub fn to_vec(&self) -> Result<Vec<Response>, RE> {
 		let temp: Vec<Value> = fv(self.0.clone())?;
 		let mut ret: Vec<Response> = Vec::new();
 		for t in temp {
@@ -37,26 +38,26 @@ impl Response {
 		}
 		Ok(ret)
 	}
-	pub fn to_i64(&self) -> Result<i64, Error> {
-		fv(self.0.clone())
+	pub fn to_i64(&self) -> Result<i64, RE> {
+		Ok(fv(self.0.clone())?)
 	}
-	pub fn to_f64(&self) -> Result<f64, Error> {
-		fv(self.0.clone())
+	pub fn to_f64(&self) -> Result<f64, RE> {
+		Ok(fv(self.0.clone())?)
 	}
-	pub fn to_bool(&self) -> Result<bool, Error> {
-		fv(self.0.clone())
+	pub fn to_bool(&self) -> Result<bool, RE> {
+		Ok(fv(self.0.clone())?)
 	}
 }
 
 pub trait AndThenGetting {
-	fn and_get<I>(&self, index: I) -> Option<Response> where I: Index + Sized;
+	fn and_get<I>(self, index: I) -> Result<Response, RE> where I: Index + Sized + ToString + Clone;
 }
-impl AndThenGetting for Option<Response> {
-	fn and_get<I>(&self, index: I) -> Option<Response>
-	where I: Index + Sized {
+impl AndThenGetting for Result<Response, RE> {
+	fn and_get<I>(self, index: I) -> Result<Response, RE>
+	where I: Index + Sized + ToString + Clone{
 		match self {
-			None => None,
-			Some(heh) => heh.get(index)
+			Err(_) => self,
+			Ok(heh) => heh.get(index)
 		}
 	}
 }

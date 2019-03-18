@@ -1,7 +1,5 @@
 extern crate reqwest;
 extern crate serde_json;
-//use std::boxed::Box;
-use std::error::Error;
 use std::string::ToString;
 extern crate serde;
 
@@ -79,8 +77,8 @@ pub struct VK {
 
 impl VK {
 	//call without any additional parameters
-	pub fn call_without<SE>(&self, method: &str, parameters: Vec<(String, String)>) ->
-	Result<Response, SE> where SE: Error + Sized {
+	pub fn call_without(&self, method: &str, parameters: Vec<(String, String)>) ->
+	Result<Response, RE> {
 		let raw_data = self.client.get(&format!("https://api.vk.com/method/{}", method))
     	.query(&parameters)
     	.send()?
@@ -90,15 +88,15 @@ impl VK {
 		let response = data.get("response");
 		let error = data.get("error");
 		match (response, error) {
-			(Some(r), None) => Ok(r),
-			(None, Some(e)) => RE::ServerError(e.to_string()?),
-			(_, _) => RE::NoImportantFieldsFound(data.to_string()?),
+			(Ok(r), _) => Ok(r),
+			(_, Ok(e)) => Err(RE::server_error(e.to_string()?)),
+			(_, _) => Err(RE::no_important_fields_found(data.to_string()?)),
 		}
-}
+	}
 
 	//call with token and v
-	pub fn call<SE>(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
-		Result<Response, SE> where SE: Error + Sized {
+	pub fn call(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
+		Result<Response, RE> {
 
 		parameters.put("access_token", &self.access_token);
 		parameters.put("v", &self.version);
@@ -106,8 +104,8 @@ impl VK {
 		self.call_without(method, parameters)
 	}
 	//call with group_id parameter
-	pub fn call_gi<SE>(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
-		Result<Response, SE> where SE: Error + Sized {
+	pub fn call_gi(&self, method: &str, mut parameters: std::vec::Vec<(String, String)>) -> 
+		Result<Response, RE> {
 		parameters.put("group_id", &self.group_id);
 		self.call(method, parameters)
 	}

@@ -1,13 +1,40 @@
 use std::error;
 use std::fmt;
+use std::convert::From;
+extern crate serde_json;
+extern crate reqwest;
 
 #[derive(Debug)]
 pub enum ResponseError {
-	FieldNotFound(String, String),
+	FieldNotFound(String),
 	NoImportantFieldsFound(String),
 	InvalidJson(String),
 	ServerError(String),
-	
+	SerdeJsonError(serde_json::Error),
+	ReqwestError(reqwest::Error)
+}
+
+impl ResponseError {
+	pub fn field_not_found(field_name: String, json: String) -> Self {
+		ResponseError::FieldNotFound(
+			format!("field `{}` not found in json: {}", field_name, json)
+		)
+	}
+	pub fn no_important_fields_found(json: String) -> Self {
+		ResponseError::NoImportantFieldsFound(format!(r#"Something went wrong. 
+VK returned data in which there was no important fields: {}"#, json)
+		)
+	}
+	pub fn invalid_json(json: String) -> Self {
+		ResponseError::InvalidJson(
+			format!("Json is not valid and cannot be recognized. Json: {}", json)
+		)
+	}
+	pub fn server_error(json: String) -> Self {
+		ResponseError::ServerError(
+			format!("The server returned an error. Error: {}", json)
+		)
+	}
 }
 
 impl fmt::Display for ResponseError {
@@ -19,11 +46,23 @@ impl fmt::Display for ResponseError {
 impl error::Error for ResponseError {
 	fn description(&self) -> &str {
 		match *self {
-			ResponseError::FieldNotFound(ref field, ref json) => &format!("field `{}` not found in json: {}", field, json),
-			ResponseError::InvalidJson(ref json) => &format!("Json is not valid and cannot be recognized. Json: {}",json),
-			ResponseError::ServerError(ref json) => &format!("The server returned an error. Error: {}", json),
-			ResponseError::NoImportantFieldsFound(ref json) => &format!(r#"Something went wrong. 
-				VK returned data in which there was no response or error: {}"#, json),
+			ResponseError::FieldNotFound(ref msg) => msg,
+			ResponseError::InvalidJson(ref msg) => msg,
+			ResponseError::ServerError(ref msg) => msg,
+			ResponseError::NoImportantFieldsFound(ref msg) => msg,
+			ResponseError::SerdeJsonError(ref err) => err.description(),
+			ResponseError::ReqwestError(ref err) => err.description(),
 		}
+	}
+}
+
+impl From<serde_json::Error> for ResponseError {
+    fn from(error: serde_json::Error) -> Self {
+        ResponseError::SerdeJsonError(error)
+    }
+}
+impl From<reqwest::Error> for ResponseError {
+	fn from(error: reqwest::Error) -> Self {
+		ResponseError::ReqwestError(error)
 	}
 }
