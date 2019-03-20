@@ -7,6 +7,7 @@ use crate::response::closures::{to_string, to_vec};
 
 use crate::response::error::ResponseError as RE;
 
+//TODO: Fn() -> Result<(), RE>
 #[allow(dead_code)]
 type Handler = &'static Fn(Response, &VK);
  
@@ -35,6 +36,7 @@ pub trait Poll: Sized {
 	fn with_wait(mut self, wait: u8) -> Self;
 }
 
+//TODO
 #[allow(dead_code)]
 #[derive(Debug)]
 struct UserPolling {
@@ -49,6 +51,7 @@ pub struct GroupPolling {
 	wait: u8
 }
 
+//TODO: rewrite impl so that you don’t have to import a Poll
 impl Poll for GroupPolling {
 	fn poll(&mut self) -> Result<Vec<Response>, RE> {
 		let resp: Value = reqwest::get(
