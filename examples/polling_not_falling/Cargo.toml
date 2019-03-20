@@ -1,0 +1,9 @@
+[package]
+name = "polling_not_falling"
+version = "0.1.0"
+authors = ["arsen <arsenchechen@yahoo.com>"]
+edition = "2018"
+
+[dependencies]
+vk_api = { git = "https://github.com/Arsen-chechen/vk_api"}
+rand = "0.6.5"
