@@ -3,12 +3,12 @@ use vk_api::{VK, par, PutInAString};
 use vk_api::response::{Response, AndThenGetting};
 use vk_api::long_polling::{GroupPolling, Poll};
 
-use vk_api::response::closures::{not_found, to_string};
+use vk_api::response::closures::to_string;
 
 extern crate rand;
 fn main() {
-	let group_id = 12345;
-	let vk = VK::from_token("token".to_owned())
+	let group_id = 1337;
+	let vk = VK::from_token("13heh37".to_owned())
 		.with_group_id(group_id);
 	let users: Response = vk.call("users.get", par!(("user_ids", 1)))
 		.expect("calling server raise error");
@@ -21,7 +21,6 @@ fn main() {
 	println!("{}, Верни стену!!", last_name);
 	let second_name: String = users.get(0)
 		.and_get("last_name")
-		.ok_or(not_found("0 or last_name", "users"))
 		.and_then(to_string)
 		.unwrap();
 

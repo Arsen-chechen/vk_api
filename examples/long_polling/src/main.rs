@@ -1,19 +1,19 @@
 extern crate vk_api;
-use vk_api::{VK, long_polling, response, par, PutInAStrings};
-use long_polling::{GroupPolling};
+use vk_api::{VK, long_polling, response, par, PutInAString};
+use long_polling::{GroupPolling, Poll};
 use response::Response;
-use std::boxed::Box;
-use std::error::Error;
+use response::error::ResponseError as Error;
+use response::closures::{to_string, to_i64};
 extern crate rand;
 
 
-
 fn main() {
+	use std::error::Error as Errr;
 	loop {
 		match raisable_function() {
 			Ok(_) => return,
 			Err(e) => {
-				println!("{}", e.to_string());
+				println!("{}", e.description());
 				continue
 			}
 		}
@@ -21,8 +21,8 @@ fn main() {
 }
 
 fn raisable_function() -> Result<(), Error> {
-	let vk = VkData:from_token("TOKEN")
-	.with_group_id(123);
+	let vk = VK::from_token("token".to_string())
+	.with_group_id(123455678900000000000000);
 	println!("{}", 
 		vk.call("users.get",
 			par![("user_ids", 1),
@@ -30,35 +30,30 @@ fn raisable_function() -> Result<(), Error> {
 		.and_then(to_string)?
 	);
 
-	GroupPolling::poll(vk, handler)
+	Ok(GroupPolling::polling(&vk, &handler))
 }
 
-fn handler(vk: &VK, update: Response) -> Result<(), Box<Error>> {
+fn handler(update: Response, vk: &VK) {
 	let type_message = update.get("type")
-		.ok_or(unknown_error("type", "update"))
-		and_then(to_string)?;
+		.and_then(to_string).unwrap();
 	if type_message == "message_new" {
-		let obj: Response = update.get("object")
-			.ok_or(unknown_error("object", "update"));
+		let obj: Response = update.get("object").unwrap();
 		let user_id: i64 = obj.get("from_id")
-			.ok_or(unknown_error("from id", "object"))
-			.and_then(to_string)?;
-		let users: Response = vk.call("users.get", par![("user_ids", user_id), ("name_case", "Nom")])?;
-		let user: Response = users.get(0).ok_or(unknown_error("0", "users"))?;
+			.and_then(to_i64).unwrap();
+		let users: Response = vk.call("users.get", par![("user_ids", user_id), ("name_case", "Nom")]).unwrap();
+		let user: Response = users.get(0).unwrap();
 		
 		let first_name: String = user.get("first_name")
-			.ok_or(unknown_error("first name", "user"))
-			and_then(to_string)?;
+			.and_then(to_string).unwrap();
 		let last_name: String = user.get("last_name")
-			.ok_or(unknown_error("last name", "user"))
-			and_then(to_string)?;
+			.and_then(to_string).unwrap();
 		let user_text: String = obj.get("text")
-			.ok_or(unknown_error("text", "obj"))
-			and_then(to_string)?;
+			.and_then(to_string).unwrap();
 		println!("{} {} Написал: {}", first_name, last_name, user_text);
-		let history = vk.call_gi("messages.getHistory", par![("count", "1"), ("user_id", user_id)])?;
-		let count: i64 = history.get("count").ok_or(unknown_error("count", "history from server"))?;
-		vk.call("messages.send", par![("user_id", user_id), ("random_id", rand::random::<i32>()), ("message", format!("Привет! Ты отправил {}-е сообщение!", count)) ])?;
+		let history = vk.call_gi("messages.getHistory", par![("count", "1"), ("user_id", user_id)]).unwrap();
+		let count: i64 = history.get("count").
+			and_then(to_i64).unwrap();
+		vk.call("messages.send", par![("user_id", user_id), ("random_id", rand::random::<i32>()),
+			("message", format!("Привет! Ты отправил {}-е сообщение!", count)) ]).unwrap();
 	}
-	Ok(())
 }

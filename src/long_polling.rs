@@ -65,8 +65,6 @@ impl Poll for GroupPolling {
 	//builders
 	fn get_long_poll_server(vk: &VK) -> Result<GroupPolling, RE> {
 		let response = vk.call_gi("groups.getLongPollServer", par![])?;
-		let heh = response.get("heh");
-		println!("{:#?}", heh);
 		Ok(GroupPolling{
 			key:	response.get("key")		.and_then(to_string)?,
 			server:	response.get("server")	.and_then(to_string)?,
